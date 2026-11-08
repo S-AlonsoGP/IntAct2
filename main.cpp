@@ -8,6 +8,7 @@
 typedef std::vector<std::vector<int>> mat ;
 typedef std::vector<std::pair<int, int>> coords ;
 
+// MST helper function
 int min_key(std::vector<int>& key, std::vector<bool>& mst_set) {  
 	int mn = INT_MAX, min_index = -1 ;
 	for (unsigned int i = 0 ; i < key.size() ; i++) { 
@@ -45,6 +46,40 @@ int mst(unsigned int n, mat& adj_matrix) {
 	return res; 
 }
 
+// TSP using Top-Down Dynamic Programming with Bitmasking
+int total_cost(int mask, int curr, mat& cost, mat& dp) { 
+	int n = cost.size() ; 
+
+	// base case
+	if (mask == (1 << n) - 1) { 
+		return cost[curr][0];
+	}
+
+	if (dp[curr][mask] != -1) { 
+		return dp[curr][mask]; 
+	}
+
+	int ans = INT_MAX; 
+
+	for (int i = 0 ; i < n ; i++) { 
+		if ((mask & (1 << i)) == 0) { 
+			// unvisited
+			ans = std::min(ans, cost[curr][i] + total_cost(mask | (1 << i), i, cost, dp)); 
+		}
+	}
+
+	return dp[curr][mask] = ans ;
+}
+
+int tsp(mat& cost) {
+	int n = cost.size() ;
+	mat dp(n, std::vector<int>(1 << n, -1)) ;
+
+	int mask = 1, curr = 0; 
+
+	return total_cost(mask, curr, cost, dp); 
+}
+
 // main function
 int main (int argc, char **argv) { 
 
@@ -63,7 +98,11 @@ int main (int argc, char **argv) {
 	char c; 
 	for (auto& [x, y] : pts) std::cin >> c >> x >> c >> y >> c ; // '(' x ',' y ')'
 	
-	std::cout << "Minimum spanning tree over ma: \n" << mst(n, ma) << std::endl;
+	std::cout << "Minimum spanning tree over ma: " << mst(n, ma) << std::endl;
+
+	std::cout << std::endl;
+
+	std::cout << "Total cost of visiting all points in ma: " << tsp(ma) << std::endl;
 
 	return 0 ;
 }
