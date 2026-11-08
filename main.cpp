@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <queue>
 #include <algorithm> 
 #include <climits>
 
@@ -80,9 +81,69 @@ int tsp(mat& cost) {
 	return total_cost(mask, curr, cost, dp); 
 }
 
+// Max Flow using Ford-Fulkerson Algorithm (Edmonds-Karp Implementation)
+bool bfs(mat &rGraph, int src, int sink, std::vector<int> &parent) {
+	int V = rGraph.size();
+
+	std::vector<bool> vis(V, false);
+	std::queue<int> q;
+
+	q.push(src);
+	vis[src] = true;
+	parent[src] = -1;
+
+	while (!q.empty()) {
+		int u = q.front();
+		q.pop();
+
+		for (int v = 0; v < V; v++) {
+			if (!vis[v] && rGraph[u][v] > 0) {
+				vis[v] = true;
+				parent[v] = u;
+
+				if (v == sink) {
+					return true;
+				}
+
+				q.push(v);
+			}
+		}
+	}
+
+	return false;
+}
+
+// Returns the maximum flow from source (0) to sink (V - 1)
+int max_flow(int V, mat& flow_matrix) {
+	int src = 0;
+	int sink = V - 1;
+
+	std::vector<int> parent(V);
+	int maxFlow = 0;
+
+	while (bfs(flow_matrix, src, sink, parent)) {
+		int pathFlow = INT_MAX;
+
+		for (int v = sink; v != src; v = parent[v]) {
+			int u = parent[v];
+			pathFlow = std::min(pathFlow, flow_matrix[u][v]);
+		}
+
+		for (int v = sink; v != src; v = parent[v]) {
+			int u = parent[v];
+			flow_matrix[u][v] -= pathFlow;
+			flow_matrix[v][u] += pathFlow;
+		}
+
+		maxFlow += pathFlow;
+	}
+
+	return maxFlow;
+}
+
+
 // main function
 int main (int argc, char **argv) { 
-
 	// read from stdin
 	std::ios::sync_with_stdio(false) ;
 	std::cin.tie(nullptr) ;
@@ -103,6 +164,10 @@ int main (int argc, char **argv) {
 	std::cout << std::endl;
 
 	std::cout << "Total cost of visiting all points in ma: " << tsp(ma) << std::endl;
+
+	std::cout << std::endl;
+
+	std::cout << "Maximum flow from 1 to " << n << " in mb: " << max_flow(n, mb) << std::endl;
 
 	return 0 ;
 }
