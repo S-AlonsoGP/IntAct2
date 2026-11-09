@@ -22,7 +22,7 @@ int min_key(std::vector<int>& key, std::vector<bool>& mst_set) {
 }
 
 // Minimum Spanning Tree (MST) using Prim's Algorithm (Adjacency matrix) 
-int mst(unsigned int n, mat& adj_matrix) { 
+/*int mst(unsigned int n, mat& adj_matrix) { 
 	std::vector<int> key(n, INT_MAX);
 	int res = 0 ;
 	// MST is a vector that tracks vertex inclusion
@@ -47,6 +47,39 @@ int mst(unsigned int n, mat& adj_matrix) {
 	return res; 
 }
 
+*/
+// Devuelve el costo total y llena 'edges' con los arcos del MST
+int mst(unsigned int n, mat& adj_matrix,
+        std::vector<std::pair<int,int>>& edges) {
+    std::vector<int> key(n, INT_MAX);
+    std::vector<int> parent(n, -1);          // NUEVO
+    std::vector<bool> mst_set(n, false);
+    int res = 0;
+
+    key[0] = 0;
+
+    for (unsigned int c = 0; c < n; c++) {
+        int u = min_key(key, mst_set);
+        mst_set[u] = true;
+        res += key[u];
+
+        if (parent[u] != -1) {               // NUEVO: guardar el arco
+            edges.push_back({parent[u], u});
+        }
+
+        for (unsigned int v = 0; v < n; v++) {
+            if (adj_matrix[u][v] != 0 &&
+                !mst_set[v] &&
+                adj_matrix[u][v] < key[v]) {
+                key[v] = adj_matrix[u][v];
+                parent[v] = u;               // NUEVO
+            }
+        }
+    }
+    return res;
+}
+
+/*
 // TSP using Top-Down Dynamic Programming with Bitmasking
 int total_cost(int mask, int curr, mat& cost, mat& dp) { 
 	int n = cost.size() ; 
@@ -79,6 +112,51 @@ int tsp(mat& cost) {
 	int mask = 1, curr = 0; 
 
 	return total_cost(mask, curr, cost, dp); 
+}
+*/
+// TSP con DP + bitmask, guardando la decisión en nxt
+int total_cost(int mask, int curr, mat& cost, mat& dp, mat& nxt) {
+    int n = cost.size();
+
+    if (mask == (1 << n) - 1) {
+        return cost[curr][0];
+    }
+    if (dp[curr][mask] != -1) {
+        return dp[curr][mask];
+    }
+
+    int ans = INT_MAX;
+    for (int i = 0; i < n; i++) {
+        if ((mask & (1 << i)) == 0) {
+            int cand = cost[curr][i] + total_cost(mask | (1 << i), i, cost, dp, nxt);
+            if (cand < ans) {
+                ans = cand;
+                nxt[curr][mask] = i;         // NUEVO: mejor siguiente ciudad
+            }
+        }
+    }
+    return dp[curr][mask] = ans;
+}
+
+// Devuelve el costo y llena 'route' con el orden de visita
+int tsp(mat& cost, std::vector<int>& route) {
+    int n = cost.size();
+    mat dp(n, std::vector<int>(1 << n, -1));
+    mat nxt(n, std::vector<int>(1 << n, -1));
+
+    int best = total_cost(1, 0, cost, dp, nxt);
+
+    // Reconstrucción del camino
+    int curr = 0, mask = 1;
+    route.push_back(0);
+    while (mask != (1 << n) - 1) {
+        int i = nxt[curr][mask];
+        route.push_back(i);
+        mask |= (1 << i);
+        curr = i;
+    }
+    route.push_back(0);                      // regresar al origen
+    return best;
 }
 
 // Max Flow using Ford-Fulkerson Algorithm (Edmonds-Karp Implementation)
@@ -159,12 +237,27 @@ int main (int argc, char **argv) {
 	char c; 
 	for (auto& [x, y] : pts) std::cin >> c >> x >> c >> y >> c ; // '(' x ',' y ')'
 	
-	std::cout << "Minimum spanning tree over ma: " << mst(n, ma) << std::endl;
+	// 1. Cableado con fibra óptica (MST)
+	std::vector<std::pair<int,int>> edges;
+	mst(n, ma, edges);
 
+	std::cout << "1. Cableado:" << std::endl;
+	for (auto& [a, b] : edges) {
+		std::cout << "(" << char('A' + a) << "," << char('A' + b) << ")" << std::endl;
+	}
 	std::cout << std::endl;
 
-	std::cout << "Total cost of visiting all points in ma: " << tsp(ma) << std::endl;
+	// 2. Ruta del repartidor (TSP)
+	std::vector<int> route;
+	tsp(ma, route);
 
+	std::cout << "2. Ruta:" << std::endl;
+	for (size_t k = 0; k < route.size(); k++) {
+		std::cout << char('A' + route[k]);
+		if (k + 1 < route.size()) std::cout << " -> ";
+	}
+	std::cout << std::endl;
+	
 	std::cout << std::endl;
 
 	std::cout << "Maximum flow from 1 to " << n << " in mb: " << max_flow(n, mb) << std::endl;
